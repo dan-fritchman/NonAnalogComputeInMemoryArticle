@@ -1,3 +1,10 @@
+% 
+% # Main Article Latex 
+% 
+% Solely sets up packages, formatting, meta-data, and the like. 
+% All content is offloaded to markdown-package-read `article.md`. 
+% 
+
 % Header content from IEEE
 \documentclass[twoside,9pt,journal,letterpage]{IEEEtran}
 \usepackage{cite}
@@ -50,7 +57,7 @@
 \newdateformat{monthdayyeardate}{%
   \monthname[\THEMONTH]~\THEDAY, \THEYEAR}
 
-\newcommand{\titlestr}{All-Digital Compute-in-Memory}
+\newcommand{\titlestr}{All-Digital Compute-in-Memory for Neural Network Acceleration}
 \title{\titlestr}
 
 \usepackage{lipsum}
@@ -79,7 +86,7 @@
 
 % Our actual content:  
 
-\markdownInput{paper.md}
+\markdownInput{article.md}
 
 \end{markdown}
 
