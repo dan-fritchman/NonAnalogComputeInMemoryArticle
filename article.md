@@ -43,7 +43,7 @@ The primary question for such digital array is whether they offer sufficient ben
 
 While CIM and analog-processing are commonly intertwined, we again note their conceptual separability. Analog matrix-multiply arrays typically incorporate local weight storage, hence their "in-memory" naming. But this weight-storage is typically tied to the size of the array, and much smaller than even modest local SRAM buffers. These "memories" are often more analogous in size and function to the register-based buffers distributed throughout a systolic array. Note that at no point in the preceding section's treatment of analog accelerators, nor in Rekhi's analysis, has the term "memory" been invoked at all.  
 
-![concept](fig/cim-concept.pdf "Digital CIM Concept")
+![concept](fig/cim-concept.png "Digital CIM Concept")
 
 Refer to Figure~\ref{fig:concept} for the idea chief 
 
@@ -77,7 +77,7 @@ The macro is designed to maximally simplify its primary unit, the CIM Atom or Bi
 
 Note each compute-bit operates directly its paired SRAM bit-cell's internal state, reaching around its access transistor. Weights are written but never read from the CIM SRAM bits; it operates as a sort of write-only SRAM. Its paired SRAM peripheral circuitry can in principle be reduced to reflect this use model, removing any read-circuits such as sense amplifiers and column muxes. 
 
-![atom](fig/bitcell.pdf "CIM Atom, or Bit-Cell")
+![atom](fig/bitcell.png "CIM Atom, or Bit-Cell")
 
 This was designed and compared against prior systolic-array-based research accelerator Gemmini (@genc2019gemmini), also developed at UC Berkeley, in TSMC 28nm and Skywater 130nm technologies. The latter's design-kit is provided as near-fully open-source software. (TBD: reference for this?) 
 
@@ -101,7 +101,7 @@ Prior work such as [@chih2021] designs such a ripple-based adder tree, and a cus
 Some kinda intro to showing other ideas that might help
 
 ![altcolumn](fig/other-cim-column.png "Alternate CIM Column, similar to [@kim2021]")
-![systolic](fig/systolic.pdf "Concept Systolic-in-Memory Array")
+![systolic](fig/systolic.png "Concept Systolic-in-Memory Array")
 
 Figure~\ref{fig:altcolumn} depicts a concept CIM array in which the reduction tree is atomized into each bit-cell. The CIM atoms then comprise the prior SRAM bit-cell and multiplier, plus a newly-added full-adder cell. This arrangement is highly similar to that presented in [@kim2019] and [@kim2021]. Partial products are passed down the array, while carries are propagated across weight-words. The array retains the bit-serial input-activation application, and the per-column shift-and-accumulate multiplier. 
 
@@ -110,8 +110,8 @@ The total reduction function also includes a carry-path through most elements in
 
 To alleviate such slow-downs, one might imagine a *systolic-in-memory array* such as that depicted in Figure~\ref{fig:systolic}. Such an array applies pipelining to one or both of its dimensions. Setting aside whether the relatively low-cost single-bit input activations are pipelined, we note that solely adding internal pipelining to the partial product accumulations incurs a substantial hardware overhead. Each atom must include its own adder and accumulator register. Like Figure~\ref{fig:altcolumn}, these accumulators must each be of width `NBITS + log2(NROWS)`. For typical array sizes, this width will be roughly twice `NBITS`, rendering roughly 2/3 of memory usage to internal partial sums. If SRAM is used to implement these accumulators, additional "micro writers" must be designed which perform SRAM writes on a single (accumulator-width) word at a time. While entirely achievable at the circuit-level, the physical design of these circuits may apply further pressure on the atom's ability to use the most-optimized SRAM cells. 
 
-![offline](fig/reduction-offline.pdf "Concept Offline Reduction in SRAM Periphery")
-![sparse](fig/near-mem-sparse.pdf "Near-Memory Array with Bit-Level Sparsity")
+![offline](fig/reduction-offline.png "Concept Offline Reduction in SRAM Periphery")
+![sparse](fig/near-mem-sparse.png "Near-Memory Array with Bit-Level Sparsity")
 
 Lastly, we consider the prospects of removing *all* circuitry from the array, but for that of the atomic unit. Figure~\ref{fig:offline} depicts the concept of such an "offline reduction" array. Such operation requires that input activations be *doubly* serialized, both bit-wise and word-wise, as only a single row can be read at a time. The reduction function can then be performed in the array's peripheral circuitry. 
 
