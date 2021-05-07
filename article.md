@@ -1,16 +1,9 @@
 
 # Abstract 
 
-This paper here:
+This article presents the design of an all-digital, SRAM-based compute-in-memory (CIM) accelerator for neural networks and machine learning. A fundamental limitation in the SRAM-CIM scheme, present but not featured in prior research, is uncovered and analyzed. Salient features of the SRAM-CIM design style for power-efficient accelerators are extracted, and applied to a VLSI-flow-compatible all-digital accelerator achieving over 100x energy-efficiency improvement over comparable systolic array designs in the same 28nm CMOS technology. 
 
-* tries to make an SRAM-style all-digital CIM 
-* shows some ways it fails
-* Shows some alternatives, and their problems
-* Shows the power efficiency of a few of its constituent parts, without the SRAM
-
-See [@rekhi2019] or [@chih2021] or [see @kim2019 p.26] for examples of citing stuff here.  
-
-
+![concept](fig/cim-concept.png "Digital Compute-in-Memory Concept")
 
 # Introduction 
 
@@ -20,52 +13,29 @@ As machine-learning acceleration occurs in both high-performance and low-power c
 Two commonly linked, although conceptually separable, classes of such accelerators have risen to prominence in recent research: those utilizing analog signal processing, and those utilizing "compute-in-memory" circuits which break the classical Von Neumann split between processing and memory-storage, incorporating logic functions among memory arrays. 
 
 
-
 ## Analog Signal Processing
 
 Analog methods for neural-network acceleration, particularly that of matrix-matrix multiplication, commonly deploy analog-domain processing for one or both of their MACC's attendant arithmetic operations: multiplication and/or addition. Analog multiplication is typically performed via a physical device characteristic, e.g. transistor voltage-current transfer [@chen2021], or that of an advanced memory cell such as RRAM[@yoon2021] or ReRAM [@xue2021]. Addition and accumulation are most commonly performed either on charge or current, the two analog quantities which tend to sum most straightforwardly. More elaborate systems use time-domain signal-processing [@sayal2020] for their arithmetic operations. 
 
 In principle these analog-domain operations can be performed at both high speed and high energy-efficiency. Their primary cost, somewhat paradoxically, is a *reduction* in fidelity. Despite representing each of their values in functionally infinite-resolution physical quantities, analog processing commonly forces signals to be quantized to just a few bits. As the native format of both upstream and downstream processing is digital, these accelerators require a domain-conversion of both their inputs (via DACs) and outputs (via ADCs). Resolution and performance of these converters is a material design constraint. This largely drives the analog techniques' second pitfall: their substantially higher design cost, both for the data converters and core arithmetic cells. 
 
-Prior research [@rekhi2019] has set an upper bound on the resolution-efficiency trade-off for such analog-computation accelerators, by (a) presuming the analog-to-digital conversion as the energy-limiting step, and (b) assuming state-of-the-art ADC performance and efficiency. But this bound is likely far too permissive. Such accelerators obviously (a) have other energy-consuming elements besides their ADCs, but more importantly, (b) do not necessarily (or even likely) feature appropriate trade-offs for state-of-the-art data conversion. Such converters often consume substantial die area, and/or require elaborate calibration highly attuned to their use-cases. To the author's knowledge no research-based attempts have been made to capture the performance of converters used in such accelerators relative to the state-of-the-art. 
+Prior research [@rekhi2019] has set an upper bound on the resolution-efficiency trade-off for such analog-computation accelerators, by (a) presuming the analog-to-digital conversion as the energy-limiting step, and (b) assuming state-of-the-art ADC performance and efficiency. But this bound is likely far too permissive. Such accelerators obviously (a) have other energy-consuming elements besides their ADCs, but more importantly, (b) do not necessarily (or even likely) feature appropriate trade-offs for state-of-the-art data conversion. Such converters often consume substantial die area, and/or require elaborate calibration highly attuned to their use-cases. 
 
-Furthermore, a substantial complication is altogether ignored: analog computation is inherently non-deterministic. Analog signals and circuits have irrecoverable sources of thermal, flicker, and shot noise, which can only be budgeted against, but never fully removed. Some proportion of the time, an analog multiplier will inevitably report that 5 x 5 makes 26, or 24: the designer's only available knob is *how often*. This is equivalent to choosing a thermal-noise SNR, a process widely understood in data-conversion literature to *quadruple* power consumption per added bit. 
-
-The analysis presented by Rekhi implicitly buckets all "AMS Error" as that commonly called *quantization error* or *quantization noise* in data-conversion space. While often fairly intractable across a large batch of devices, these errors are deterministic for a given device once fabricated, while held under unvarying conditions. Thermal noise, in contrast, varies per operation, including between multiplications in the same inference cycle. To the author's knowledge no treatment of such inherently-random error sources exists in the literature on these analog techniques. While a category of *stochastic neural networks* attempts to intentionally include such noise sources, these techniques are not what popular networks or accelerators thereof attempt to compute. 
-
+Furthermore, a substantial complication is altogether ignored: analog computation is inherently non-deterministic. Analog signals and circuits have irrecoverable sources of thermal, flicker, and shot noise, which can only be budgeted against, but never fully removed. The analysis presented in [@rekhi2019] implicitly buckets all "AMS Error" as that commonly called *quantization error* or *quantization noise* in data-conversion space. While often fairly intractable across a large batch of devices, these errors are deterministic for a given device once fabricated, while held under unvarying conditions. Thermal noise, in contrast, varies per operation, including between multiplications in the same inference cycle. 
 
 
 ## Compute-in-Memory 
 
-Digital compute-in-memory circuits, in contrast, retain the digital-word representation of each quantity, and retain the boolean-logic implementation of their core arithmetic function. Their distinct characteristic is that said arithmetic is dispersed among a memory-and-compute array, the atoms of which are not generally available to common digital-design flows (synthesis, place-and-route layout). Digital CIM cells appear to their surrounding systems more similar to SRAM arrays which internally perform some amount of computation. The internal atoms of these circuits generally include (a) one or more high-density storage elements, similar to those of a typical SRAM bit-cell, and (b) a paired atom of computation, often a single-bit or small-resolution multiplication. Peripheral circuits include those similar to typical SRAMs, designed to read or write words at a time, as well as those designed for combining atomic-level operations, such as accumulation of partial products. Many such circuits are designed for wide flexibility among operand-types, often serializing smaller internal operands to form larger inputs and outputs.  [@chih2021] does so on four-bit units, while [@kim2019] and [@kim2021] extend this idea all the way to single-bit serial operation. 
+Digital compute-in-memory circuits, in contrast, retain the digital-word representation of each quantity, and retain the boolean-logic implementation of their core arithmetic function. Their distinct characteristic is that said arithmetic is dispersed among a memory-and-compute array, the atoms of which are not generally available to common digital-design flows (synthesis, place-and-route layout). Digital CIM cells appear to their surrounding systems more similar to SRAM arrays which internally perform some amount of computation. The internal atoms of these circuits generally include (a) one or more high-density storage elements, similar to those of a typical SRAM bit-cell, and (b) a paired atom of computation, often a single-bit or small-resolution multiplication. Peripheral circuits include those similar to typical SRAMs, designed to read or write words at a time, as well as those designed for combining atomic-level operations, such as accumulation of partial products. Figure~\ref{fig:concept} illustrates the conceptual digital CIM. Many such circuits are designed for wide flexibility among operand-types, often serializing smaller internal operands to form larger inputs and outputs.  [@chih2021] does so on four-bit units, while [@kim2019] and [@kim2021] extend this idea all the way to single-bit serial operation. 
 
 The primary question for such digital array is whether they offer sufficient benefit to justify their design cost. Such circuits require leaving typical digital-design flows and adopting a custom design processes similar to that of SRAM, a field now commonly reserved for the largest and best-resourced industrial teams. (Although notably still less complex than a full-analog design process.) SRAM arrays however include a material constraint which CIM accelerators need not: SRAM bit-cells are generally designed to be instantiated billions of times over, and accordingly designed to incredibly high yield. Many such cells are designed to fail only when outside of six or seven standard-deviations worth of manufacturing tolerances. Even these low failure rates justify the overhead of redundancy and error-correction peripheral circuits. CIM accelerators, in contrast, are likely to include several orders of magnitude fewer bits, and may allow for correspondingly higher failure rate of their atomic-units. The circuit-level arrangement of these atomic-units can and does in many cases ease common SRAM-design constraints, such as the tension between bit-cell readability and writability. 
 
 While CIM and analog-processing are commonly intertwined, we again note their conceptual separability. Analog matrix-multiply arrays typically incorporate local weight storage, hence their "in-memory" naming. But this weight-storage is typically tied to the size of the array, and much smaller than even modest local SRAM buffers. These "memories" are often more analogous in size and function to the register-based buffers distributed throughout a systolic array. Note that at no point in the preceding section's treatment of analog accelerators, nor in Rekhi's analysis, has the term "memory" been invoked at all.  
 
-![concept](fig/cim-concept.png "Digital CIM Concept")
-
-Refer to Figure~\ref{fig:concept} for the idea chief 
-
-
-## Proposed Work 
-
-Both compute-in-memory and analog computation are back-end implementation techniques for the same popular neural network operation: matrix-matrix multiplication. Evaluation of their effectiveness is primarily a back-end, physical-design activity, requiring relevant process technology information and relatively detailed design. This work will focus on these layers, and re-use existing research infrastructure for essentially all layers above them, primarily Gemmini and its software stack. This work will primarily include: 
-
-* Energy and performance characterization of existing research-grade accelerator(s) (e.g. Gemmini) in relevant process technology(s)
-* Design of a digital compute-in-memory macro similar to that of [@chih2021] and [@kim2019], and associated characterization and comparison of its area and energy-effectiveness 
-* Time-Permitting: a modeling-based study of the effects of, and limitations imposed by, thermal-noise generation in analog-based accelerators, potentially further refining Rekhi et al's outer bound on their effectiveness 
-
-Breaking this work into segments: the first will feature the back-end evaluation of the existing accelerator(s) in the target technology(s), and outline the design of the proposed digital accelerator. The second will feature the detailed design of the digital accelerator. And the third will detail the area and energy-efficiency achieved in its design efforts, as compared to those of the existing accelerator(s). 
-
-Like most such pieces of detailed implementation work, these efforts will largely require targeted verification. Large integrated simulations of RTL-level processors running billions of instructions (a philosophical preference in the BAR community) would require impractical simulation times if utilizing transistor-level models of such compute-arrays. As is common in mixed-signal environments, any such full-system evaluation will use simplified but interface-compatible RTL models of these arrays, designed to capture their characteristics as visible to the larger system: their interfaces, behavior, and relavant timing delays. Comparison of these models against their implementations then occurs separately. 
-
-This work will require the generation of several pieces of highly repetitive, high density custom-digital layout. Past UCB EECS work such as the Berkeley Analog Generator has designed methods for programmatic IC layout generation, but has focused on (a) analog circuits, and (b) their generality and process-portability to an extent incompatible with high-density digital layout, such as that common in SRAM. This work will instead utilize an in-progress framework for gridded, standard-cell-style semi-custom layout, and will serve as an early use-case for this framework. 
-
 
 # Proposed All-Digital CIM Macro 
 
-The proposed all-digital compute-in-memory macro is depicted in Figure~\ref{fig:macro}. Like @chih2021, @TBD, and many similar digital CIM desings, this work operates *bit-serially* on its input activations. Its primary memory-and-compute array is comprised of a set of weight columns, each of which includes an input-activation serializer, a parametric `NROWS` CIM "molecules" comprising eight-bit-word weight storage and compute, and a per-column reduction circuit comprising an adder tree and shift-and-accumulate multiplier. The macor stores and operates on weights directly in its CIM array, and includes additional shared SRAM for input activations, partial matrix-products, weight overflow, and any ancillary data. 
+The proposed all-digital compute-in-memory macro is depicted in Figure~\ref{fig:macro}. Like [@chih2021], [@kim2019], and many similar digital CIM desings, this work operates *bit-serially* on its input activations. Its primary memory-and-compute array is comprised of a set of weight columns, each of which includes an input-activation serializer, a parametric `NROWS` CIM "molecules" comprising eight-bit-word weight storage and compute, and a per-column reduction circuit comprising an adder tree and shift-and-accumulate multiplier. The macor stores and operates on weights directly in its CIM array, and includes additional shared SRAM for input activations, partial matrix-products, weight overflow, and any ancillary data. 
 
 ![macro](fig/cim.png "Proposed CIM Macro")
 
@@ -88,13 +58,77 @@ The `NROWS x NCOLS`-sized CIM and systolic arrays both produce a series of `NCOL
 
 The liabilities of the all-digital CIM proposed here, and of those proposed in recent research, lie in the design of their reduction function. 
 
-In each of the two evaluation technologies, the minimum-sized standard logic gate is roughly 2x that of the single-port SRAM bit cell. Presuming that its widespread re-use has pushed the SRAM bit-cell to near its design-rule-derived minimum size, and that a single two-input logic gate can be similarly optimized onto minimum size, we plan for a CIM atom of roughly 2x the SRAM bit-cell area. Product-outputs from pairs of these CIM atoms are then fed into the inputs of a binary adder tree. Both evaluation technologies provide full-adder cells as part of their standard libraries; in both cases the area of such cells is roughly *12x* that of the SRAM bit-cell. At such proportions, the adder tree's input stage alone requires roughly 3x the area of the CIM atoms. While these cells might also be redesigned for minimal area, it remains unlikely that they would near that of the single-bit multiplier or SRAM bit-cell. The NAND/NOR realization of such a gate requires nine such cells; common XOR-based implementations commonly use in excess of 20 transistors. 
+![atomic-sizes](fig/atomic-sizes-sky130.png "Relative Sizes of SRAM Bit-Cell, Minimum Logic Gate, and Full Adder in the 130nm Technology")
+
+In each of the two evaluation technologies, the minimum-sized standard logic gate is roughly 2x that of the single-port SRAM bit cell. Presuming that its widespread re-use has pushed the SRAM bit-cell to near its design-rule-derived minimum size, and that a single two-input logic gate can be similarly optimized onto minimum size, we plan for a CIM atom of roughly 2x the SRAM bit-cell area. Product-outputs from pairs of these CIM atoms are then fed into the inputs of a binary adder tree. Both evaluation technologies provide full-adder cells as part of their standard libraries; in both cases the area of such cells is roughly *12x* that of the SRAM bit-cell. Figures ~\ref{fig:atomic-sizes} shows these proportions for the 130nm technology. (The 28nm technology cant be shown, because theyre too big of pussies to show layout like this. FIXME!)  At such proportions, the adder tree's input stage alone requires roughly 3x the area of the CIM atoms. While these cells might also be redesigned for minimal area, it remains unlikely that they would near that of the single-bit multiplier or SRAM bit-cell. The NAND/NOR realization of such a gate requires nine such cells; common XOR-based implementations commonly use in excess of 20 transistors. 
 
 Initial VLSI-flow-based layout of 64-row CIM columns yielded adder-tree areas between 24x and 81x the SRAM area, depending on their target frequency. The relatively wide range illustrates a material constraint in the adder-tree design: the fastest such circuits generally trade area in exchange for speed. Carry-select is a prominent example, widely generated by logic synthesis; it roughly doubles the adder area by including two parallel adders, multiplexed to select the correct carry value. Low-area adders tend to be slow adders. The lowest-area known to the author is also the most basic: the ripple-carry. [@chih2021] makes explicit their use of such in the reduction tree. 
 
-Figure TBD depicts the proportion of area dedicated to the reduction adder-tree for all relevant parametric combinations of `NBITS` and `NROWS`, using the min-area-architecture ripple adder. In each case the *quantity* of SRAM bit and full-adder unit-cells is a ratio between 1:1 and 1.4:1. The larger unit-area of the full-adder, here presumed to be 6x that of the bit-cell, renders its area contribution between 80 and 85 percent of the array. This estimate for the area ratio is subject to both upward and downward pressure, as (a) a custom FA unit-cell can be designed at lower area than the standard-library's, as in [@chih2021], but (b) arrangement of the binary-tree of these cells onto a rectangular array would likely incur significant overhead. 
+![area-cell-ratio](fig/area-cell-ratio.png "Ratio of FA Cells to SRAM Bit-Cells")
+![area](fig/area-proportions.png "Area Proportion Due to Adder Tree")
+
+Figures ~\ref{fig:area-cell-ratio} and ~\ref{fig:area} depicts the proportion of area dedicated to the reduction adder-tree for all relevant parametric combinations of `NBITS` and `NROWS`, using the min-area-architecture ripple adder. In each case the *quantity* of SRAM bit and full-adder unit-cells is a ratio between 1:1 and 1.4:1. The larger unit-area of the full-adder, here presumed to be 6x that of the bit-cell, renders its area contribution between 80 and 85 percent of the array. This estimate for the area ratio is subject to both upward and downward pressure, as (a) a custom FA unit-cell can be designed at lower area than the standard-library's, as in [@chih2021], but (b) arrangement of the binary-tree of these cells onto a rectangular array would likely incur significant overhead. 
 
 Prior work such as [@chih2021] designs such a ripple-based adder tree, and a custom full-adder cell therefore. While no analysis is provided regarding its area breakdown, a total of 64Kb worth of 0.379µm2 bit-cells are included in an overall 202k µm2 macro, comprising roughly 12 percent of its overall area. We expect the remaining area and relatively low proportion of memory-area is, as in this work, due to the area demands of the adder tree. 
+
+
+## CIM Column 
+
+Code listing 1 shows highlights of the gate-level SystemVerilog design of the CIM column. Verilog's `generate` expansion-statements produce the gate-level adders and single-bit multipliers, while offline scripting produces the binary adder tree. The two crucial leaf-level cells `fa` and `mult1b` are thin wrappers around foundry standard-library gates. 
+
+```verilog
+module ripple_add #( /* ... */ ); 
+  generate
+  for (k=0; k<WIDTH; k=k+1) begin
+    fa i_fa( /* ... */ );
+  end
+  endgenerate 
+endmodule
+
+module ripple_adder_tree ( /* ... */ );
+  assign layer0out = summands;
+  logic signed [31:0] [8:0] layer1out;
+  ripple_add #(.WIDTH(8)) 
+    i_ra_1_0 ( /* ... */ );
+  /* ... */
+  logic signed [13:0] layer6out;
+  ripple_add #(.WIDTH(13)) 
+    i_ra_6_0 ( /* ... */ );
+  assign sum = layer6out [13:0];
+endmodule
+
+module column #( /* ... */ ); 
+  /* ... */
+  // Single-Bit Multiplies 
+  logic signed [NROWS-1:0][WORDLEN-1:0] 
+    products;
+  genvar j, k;
+  generate
+  for (j=0; j<NROWS; j=j+1) begin
+    for (k=0; k<WORDLEN; k=k+1) begin
+      mult1b i_mult1b (
+        .A1 (ia_m1[j]), 
+        .A2 (weight[j][k]), 
+        .ZN (products[j][k])
+      );
+    end
+  end
+  endgenerate 
+  /* ... */
+endmodule
+```
+
+![col-sky130](fig/column-ripple-sky130.png "VLSI-Flow-Generated CIM Column in 130nm Technology")
+![col-tsmc28](fig/column-ripple-tsmc28.png "VLSI-Flow-Generated CIM Column in 28nm Technology")
+
+Weight storage is left external to these initial column designs, to first demonstrate the likely power, performance, and area of the remaining column circuitry. Columns generated by a standard VLSI flow place-and-route tool in the 28nm and 130nm technologies are shown in Figures ~\ref{fig:col-tsmc28} and ~\ref{fig:col-sky130}, respectively. Each includes 64 rows with eight-bit weight-words. The 28nm column occupies roughly 2.5k µm2 while the 130nm technology's requires roughly 22.5k µm2. 
+
+Critical-path delay through the 28nm column is slightly longer than 900ps, allowing operation up to roughly 1.1GHz. The 130nm column is roughly 1/20th the speed, running at up to roughly 50MHz. Each omits the input-activation serialization and distribution timing present at the array-level, which further limits the speed of full arrays, particularly large ones. 
+
+For each of the evaluation technologies, the column area is more than 20x that of its paired SRAM, rendering the overall array-area roughly 95\% dedicated to compute, and only 5\% to memory. This calls into question the viability of an SRAM-style design process, or to attempting to pitch-match the compute-array's physical design to that of high-density SRAM. If memory cells comprise only a few percent of the design area, 
+* Do area stuff like [@chih2021]
+* First an aside to consider alternative arrays which might alleviate this constraint. 
+* 
 
 # Alternate Array Designs 
 
@@ -119,16 +153,35 @@ Examining such a design quickly produces the realization that it does not requir
 
 This section's alternative designs are presented at the level of detail at which they have been investigated: the block-diagram level. While that of Figure~\ref{fig:sparse} is of particular future interest as a low-area, modest performance acceleration solution, the focus of this work remains on the proposed CIM array, to which we now return. 
 
+# CIM Array Design 
 
-# Energy Comparisons 
+FIXME: something about how so little SRAM dictates dropping the SRAM design-process, using the VLSI flow. 
 
-Tree vs systolic/ Gemmini, other peoples comps and mine, etc
+
+![array-tsmc28](fig/array-ripple-tsmc28.png "VLSI-Flow-Generated CIM Array in 28nm Technology")
+![array-sky130](fig/array-ripple-sky130.png "VLSI-Flow-Generated CIM Array in 130nm Technology")
+
+Figures ~\ref{fig:array-tsmc28} and ~\ref{fig:array-sky130} depict VLSI-flow-generated layouts of 128-row by 128-column CIM arrays in the 28nm and 130nm evaluation technologies. Each uses eight-bit weights and input activations. The 28nm array is roughly 490k µm2 (700x700µm) and the 130nm array is roughly 3.4mm2. The 128x128 dimensions are chosen to roughly match the area of the default Gemmini systolic array in the 28nm technology, which requires 518k µm2. The divisions shown in Figure ~\ref{fig:array-sky130} show the VLSI flow's placement of each column-circuit. Note that unlike an SRAM-style array of regular rows and columns, the automatically-generated layout places each column-circuit in a close-knit patch of aspect ratio near 1:1. This likely improves the area and routing among its reduction tree, at the cost of the routing of bitlines, wordlines, and bit-serial input activations. Despite being supplied a gate-level netlist explicitly including foundry standard-library full-adder cells, the VLSI flow commonly chooses to break up each adder-bit into simpler gates: AOI and AND, XNOR and XNOR, or larger sets of NAND and NOR. This flexibility also likely improves the area of the column-circuits, particularly as it allows the 128 columns to be non-identical, often better-fitting around one another. A custom SRAM-style design process would be hard-pressed to include this level of layout flexibility. 
+
+## Power, Performance, and Area Comparisons 
+
+Table 1 summarizes the power, performance, and area of the CIM array and Gemmini systolic array in the same 28nm technology. Both arrays use eight-bit weights and input activations. The Gemmini array uses its default parameters, including a 16x16 mesh of systolic tiles. Each tile of the systolic array consists of a multiplier, accumulator, and registers for facilitating the two-dimensional systolic pipeline. In about 95\% of its area, the CIM array includes 64x are many eight-bit "molecular" units plus their associated reduction circuitry. Despite running at 40\% of the systolic array's clock frequency, the CIM array produces over 3x higher throughput, sped up by the 64x larger array, and slowed down by (a) the 8x bit-penalty for bit-serializing input activations, and (b) the 60\% slower clock frequency. Operations are defined by the systolic array's convention: either a scalar multiply or a scalar addition; each scalar MACC therefore counts as two ops. More important, the CIM array performs this work at roughly 1/30th the power consumption. Overall efficiency expressed in operations per Watt is therefore improved by over 100x. 
+
+The substantially higher power efficiency can be attributed to two primary factors. First, the combinational nature of the CIM array's reduction function. Accumulation is performed in the systolic array through a two-dimensional pipeline, requiring local register storage for each of the last `NROWS` partial sums, and each of the last `NCOLS` input activations. The former is also of greater bit-width than either the input-activations or weights, as it must accommodate the largest accumulated values. In default Gemmini implementations these accumulator registers are (perhaps conservatively) set to 32 bits, 4x the weight-width. Updating all of this pipeline-state on each cycle costs energy which is not fundamental to the computation. The pipeline registers instead effectively enable a shorter clock period for the array's hardware multipliers and accumulators. The CIM array lacks all such state, but for the weight array and a per-column shift-accumulator, in this case amortized over 128 rows. 
+
+Second is the energy-effect of the CIM array's bit-serial operation. The CIM array features no explicit hardware multiplier, and only a single data-word per column which is wider than the weight-word (the shift-accumulator value). Where the systolic array first computes each product in bit-parallel and then sums them word-serially, the CIM array first computes each input-activation bits' contribution to the vector-matrix product, then shifts and sums them bit-by-bit. This again reduces the state that must be updated on each cycle. As of publication time, the relative contributions of these two effects remain unknown. 
+
+Contemporary (draft) research following onto [@genc2019gemmini] has also shown a substantial power advantage of combinational trees over systolic arrays. Differences between these works' findings and our own are matters of degree. Reports of 3x lower power (75\% reduction) have been reported for Gemmini accelerators using combinational adder trees in lieu of the systolic array. Our own work finds a gap closer to 30x. A few factors likely explain the difference. First, [@genc2019gemmini] accounts for the power of entire Gemmini macros, where this analysis covers solely their compute array. The remainder of the Gemmini macro is roughly 50\% (by area) comprised of SRAM, and a large proportion to memory controllers servicing out-of-order requests and responses from the memory system. These components' power is not directly affected by the compute-array design, and likely reduces the difference across the full macro. Second, this work evaluates both Gemmini and the CIM arrays in a new (to each of the two) 28nm technology, without the material optimization effort typically associated with producing a tape-out-ready macro. It is likely that such optimization steps improve both the systolic and combinational Gemmini's efficiency, further limiting the power gap between internal design choices. Third, the Gemmini generator features a rich suite of parameterizability not included in the CIM array. Ideally the entirety of this flexibility is paid out at "generation" (e.g. compile) time. In practice, some features designed for larger Gemmini instances likely leak into smaller ones, such as the default implementation compared here. Lastly and most promisingly for future research, the authors of [@genc2019gemmini] do not compare a bit-serial design such as the proposed CIM array. While the bit-serial operation's effect on power efficiency is not fully extracted in this work, both a first-principles consideration of its theory of operation and the proposed CIM array's overall extremely high power-efficiency indicate the bit-serial mode is likely providing an energy advantage. 
+
+The CIM array includes a number of further opportunities for improvement. While the VLSI flow's placement of each CIM column in nearly 1:1 aspect ratio improves the locality of its reduction tree, it also applies great pressure on the routing of the bit-serial input activations, wordlines, and bitlines. In the 28nm design, distribution of the input-activation comprises over 2/3 of the roughly 2.2ns critical path delay. (Writes to the weight SRAM using the wordlines and bitlines do not include the adder-tree delays and are hence not on the critical path.) A more structured physical design with more directed `IA`, `WL`, and `BL` routing, whether dictated through semi-custom layout or VLSI flow constraints, would likely improve these distribution delays at the cost of some area and delay through the reduction tree. 
 
 # Conclusions 
 
-* As conceived this aint great
-* Power efficiency of combinational/ bit-serial stuff lookin great though 
-* 
+This work endeavored to produce an all-digital compute-in-memory macro using a highly regular, semi-custom physical design methodology similar to that common for SRAM. This premise met a simple roadblock: bit-for-bit, compute is **much** larger than memory. 
+
+Recently-published research attempts at similar SRAM-based CIM testify to this fact, as they rarely dedicate less than 90\% of their area to compute. This work never produced one with less than 95\%. Given decades of industry and economic trends, this makes sense: popular SRAM bit-cell design efforts are amortized over trillions of instances, have a compact and unchanging realization, and have been ever-pressured towards higher density. Given their relative sizes, embedding computation in memory simply transfers the properties of the former to the latter. 
+
+This realization is not without upside. An SRAM design process is laborious, and operates on a far different time-scale from that of synthesized logic, much less the quickly changing machine learning field. (Although it remains less laborious than a common alternative using analog computation.) Given memory is only a small proportion of accelerator area, designs pay little penalty for forgoing the SRAM-style design process and adopting an automated VLSI flow. Two tactics used in recent all-digital CIM circuits - combinational reduction and bit-serial operation - both appear to offer material energy efficiency advantages. The former is corroborated by contemporary work, while the detailed effects of the latter require further research. Both can be adapted to future energy-efficient neural-network accelerators, including those compatible with industry-standard VLSI design flows. 
 
 The author thanks the team at TSMC for access to its 28nm technology, and the teams at Skywater and Google for their efforts promoting the open-source design-kit for the 130nm technology. Particular thanks are due to A. Gonzalez and Professor S. Shao, both of UC Berkeley, for their invaluable review and input.  
 

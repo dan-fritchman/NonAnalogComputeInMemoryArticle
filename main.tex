@@ -57,7 +57,7 @@
 \newdateformat{monthdayyeardate}{%
   \monthname[\THEMONTH]~\THEDAY, \THEYEAR}
 
-\newcommand{\titlestr}{All-Digital Compute-in-Memory for Neural Network Acceleration}
+\newcommand{\titlestr}{All-Digital In-Memory Computation for Machine Learning and Neural Network Acceleration}
 \title{\titlestr}
 
 \usepackage{lipsum}
@@ -90,6 +90,30 @@
 
 \end{markdown}
 
-\bibliographystyle{plainnat}
+% Sadly tables must be in Latex. 
+
+\begin{table}[!ht]
+\caption{Power, Performance, and Area of CIM and Gemmini Systolic Arrays in 28nm CMOS} 
+\label{table:comparison}
+\centering
+\begin{tabularx}{\columnwidth}{
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X 
+	| >{\centering\arraybackslash}X | }
+	\hline
+	& Dims & Area (µm2) & Freq (GHz) & Power (mW) & Ops/s & Ops/W \\
+	\hline
+	CIM Array & 8b 128x128 & 490k & 0.4 & 98.2 & 1638G & 16.7T \\
+	\hline
+	Gemmini (Systolic) Array & 8b 16x16 & 518k & 1.0 & 3177 & 512G & 161G \\
+	\hline
+\end{tabularx}
+\end{table}
+
+\bibliographystyle{ieeetr}
 \bibliography{refs}
 \end{document}
